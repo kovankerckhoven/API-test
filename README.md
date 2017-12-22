@@ -1,5 +1,8 @@
 # API-test
 EVENTIGRATE API TEST
+
+Dependencies: Python 2.7, sqlite3, requests (pip install requests)
+
 1) Retrieve the following data from restful web services:
 https://restcountries.eu/ (free, without registration)
     Name
