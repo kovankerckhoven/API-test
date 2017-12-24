@@ -54,7 +54,7 @@ from datetime import date
 
 currencyCodes = []
 codeCollection = ""
-db = sqlite.connect('countries.db')
+db = sqlite.connect('countries.db', isolation_level=None)
 db_cursor = None
 
 def db_setup():
@@ -78,9 +78,6 @@ def db_print():
 			print("Table %s" % table)
 			print(db_cursor.fetchall())
 			print("")
-
-db_setup()
-db_print()
 
 # What we will use to temporarily store objects before updating the DB
 class Country(object):
@@ -142,22 +139,24 @@ def getCountries():
 				rows = db_cursor.fetchall()
 				if not rows: # Country not in DB yet; insert it completely
 					db_cursor.execute("INSERT INTO Countries(name, callingCode, capital, currency, flag) VALUES ('%s', '%s', '%s', '%s', '%s');" % (countryObj.name, countryObj.callingCodes[0], countryObj.capital, countryObj.currencies[0]['code'], countryObj.flag))
+					db_cursor.execute("SELECT id FROM Countries WHERE name='%s';" % countryObj.name)
+					country_id = db_cursor.fetchall()[0][0]
 					db_cursor.execute("INSERT INTO Country_Has_Population(country_id, date, population) VALUES ('%s', '%s', '%s');" % (country_id, date.today(), countryObj.population))
 				else: # Country already in DB; check if today's population is in DB
 					country_id = rows[0][0]
-					db_cursor.execute("SELECT population, date FROM Country_Has_Population WHERE country_id='%s'" % country_id)
+					db_cursor.execute("SELECT population, date FROM Country_Has_Population WHERE country_id='%s' ORDER BY date DESC" % country_id)
 					rows = db_cursor.fetchall()
 					if not rows: # No population for this country in DB yet; insert it
 						db_cursor.execute("INSERT INTO Country_Has_Population(country_id, date, population) VALUES ('%s', '%s', '%s');" % (country_id, date.today(), countryObj.population))
 					elif "%s" % rows[0][1] != "%s" % date.today(): # Population for this date not in DB yet; insert it
 						db_cursor.execute("INSERT INTO Country_Has_Population(country_id, date, population) VALUES ('%s', '%s', '%s');" % (country_id, date.today(), countryObj.population))
+					# If there is already a population for today, compare the values and take the mean?
 		elif response.status_code == 404:
 			print("HTTP 404: InvalidURL")
 			raise requests.exceptions.InvalidURL
 		else:
 			print("RequestException")
 			raise requests.exceptions.RequestException
-		db_print()
 
 """ 
 fixer.io API calls
@@ -165,35 +164,33 @@ https://api.fixer.io/latest?symbols=USD,GBP&base=EUR (will ask for today's EUR/U
 
 TODO: Check if individual Rates records exist already (id, Base/Symbol pairings) before checking rate values
 TODO: Insert individual Rates records (id, Base/Symbol pairings) if they do not exist
+TODO: Insert Rate_Has_Value records (rate_id, date, DOUBLE value)
 """
 def getExchangeRates():
 	global currencyCodes, codeCollection, db, db_cursor
-	
-	with db:
-		db_cursor.execute("SELECT date FROM Rate_Has_Value ORDER BY date DESC")
-		rows = db_cursor.fetchall()
-		if not rows: # Nothing in DB yet
-			insertRateValues()
-		elif "%s" % rows[0][0] == "%s" % date.today(): # Rate values for today are in DB already; only add new rates
-			print("Rates for today already in DB; check individual base/symbol pairs")
-		else:
-			insertRateValues()
-"""
-TODO: Insert Rate_Has_Value records (rate_id, date, DOUBLE value)
-"""
-def insertRateValues():
-	global currencyCodes, codeCollection, db, db_cursor
 	fixerBase = "https://api.fixer.io/latest?symbols="
-	for fixerField in currencyCodes:
-		url = ("%s%s&base=%s" % (fixerBase, codeCollection, fixerField)) # format URL
+	for baseField in currencyCodes:
+		url = ("%s%s&base=%s" % (fixerBase, codeCollection, baseField)) # format URL
 		response = requests.get(url)
 		if response.status_code == 200: # HTTP 200 OK
 			data = json.loads(response.text)
-			# TODO: Instead of printing, insert into DB
-			print("")
-			print("Exchange rate date: %s" % data['date'])
-			for rate in data['rates']:
-				print("%s/%s: %s" % (data['base'], rate, data['rates'][rate]))
+			for rate in data['rates']: # data['base'] is the BASE, rate is the SYMBOL (BASE/SYMBOL notation)
+				db_cursor.execute("SELECT id FROM Rates WHERE base='%s' AND symbol='%s';" % (baseField, rate))
+				rows = db_cursor.fetchall()
+				if not rows: # This rate (BASE/SYMBOL combination) not in DB yet; insert it completely
+					db_cursor.execute("INSERT INTO Rates(base, symbol) VALUES ('%s', '%s');" % (data['base'], rate))
+					db_cursor.execute("SELECT id FROM Rates WHERE base='%s' AND symbol='%s';" % (data['base'], rate))
+					rate_id = db_cursor.fetchall()[0][0]
+					db_cursor.execute("INSERT INTO Rate_Has_Value(rate_id, date, value) VALUES ('%s', '%s', '%s');" % (rate_id, date.today(), data['rates'][rate]))
+				else: # Rate already in DB; check today's values instead
+					rate_id = rows[0][0]
+					db_cursor.execute("SELECT value, date FROM Rate_Has_Value WHERE rate_id='%s' ORDER BY date DESC" % rate_id)
+					rows = db_cursor.fetchall()
+					if not rows: # No value for this rate in DB yet; insert it
+						db_cursor.execute("INSERT INTO Rate_Has_Value(rate_id, date, value) VALUES ('%s', '%s', '%s');" % (rate_id, date.today(), data['rates'][rate]))
+					elif "%s" % rows[0][1] != "%s" % date.today(): # Population for this date not in DB yet; insert it
+						db_cursor.execute("INSERT INTO Rate_Has_Value(rate_id, date, value) VALUES ('%s', '%s', '%s');" % (rate_id, date.today(), data['rates'][rate]))
+					# If there is already a rate for today, compare the values and take the mean?
 		elif response.status_code == 404:
 			print("HTTP 404: InvalidURL")
 			raise requests.exceptions.InvalidURL
@@ -205,8 +202,11 @@ def insertRateValues():
 def callAPIs():
 	getCountries()
 	getExchangeRates()
-					
+
+db_setup()
+#db_print()
 callAPIs()
+#db_print()
 
 """
 def writeToFile():
