@@ -3,24 +3,43 @@ EVENTIGRATE API TEST
 
 Dependencies: Python 2.7, sqlite3, requests (pip install requests)
 
-1) Retrieve the following data from restful web services:
+1) Retrieves data from the following restful web services:
 https://restcountries.eu/ (free, without registration)
     Name
     Calling code
     Capital
     Population
     Currency
-    Flag
+    Flag --------------> in images/<country.svg>
 http://fixer.io/ (free, without registration)
     Exchange rate (EUR vs. AUS, BRA, CHN, GBR, USA)
-2) Store the data in a database (SQLite)
-3) Report the results for each country (Australia, Brazil, China, Great Britain, USA) back to the end user
 
-The end-user report should contain (the average of) all above properties for the past month in
-a nice and clean summary of the following countries: AUS, BRA, CHN, GBR, USA.. The type of
-report can be decided completely by you (.xls, .html, .pdf, .txt, .csv, ...). You can choose the
-language, technologies, frameworks, tools, etc. Please create your own database and push your
-code to a git repository together with an example of the output report and a sketch off your
-architecture/design (a photo of a simple paper-sketch suffices) and share the repository with
-thomas_demoor@msn.com or the user thomasdemoor on Bitbucket. If something is unclear,
-you can always send a mail to thomas@eventigrate.com or give a call at +32497486215.
+2) Stores this data in a database (SQLite)
+Table Countries
+	id				INTEGER PRIMARY KEY (AUTOINCREMENT)
+	name			TEXT
+	callingCode		TEXT
+	capital			TEXT
+	currency		TEXT
+	flag			TEXT
+Table Country_Has_Population
+	country_id		INTEGER (FOREIGN KEY)
+	date			DATE
+	population		INTEGER
+Table Rates
+	id				INTEGER PRIMARY KEY (AUTOINCREMENT)
+	base			TEXT
+	symbol			TEXT
+Table Rate_Has_Value
+	rate_id			INTEGER (FOREIGN KEY)
+	date			DATE
+	value			INTEGER
+	
+3) Reports this information as static HTML pages
+countries.html		-->		Contains general information for the countries
+flags.html			-->		Contains large-scale versions of the flags
+rates.html			-->		Displays all currency exchange rates in a clean overview
+
+Examples:
+![Countries](https://i.imgur.com/WNbUrAO.png)
+![Exchange Rates](https://i.imgur.com/cYhOFgK.png)

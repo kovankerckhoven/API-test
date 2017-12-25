@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Country flags">
+    <meta name="author" content="Koen Van Kerckhoven">
+    <link rel="icon" href="bootstrap/favicon.gif">
+    <title>Country flags</title>
+
+    <link href="bootstrap/dist/css/bootstrap.min.css" rel="stylesheet"><!-- Bootstrap core CSS -->
+    <link href="dashboard.css" rel="stylesheet"><!-- Custom styles for this template -->
+  </head>
+
+  <body>
+	<header>
+		<nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+			<a class="navbar-brand" href="countries.html">Dashboard</a>
+			<button class="navbar-toggler d-lg-none" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+
+			<div class="collapse navbar-collapse" id="navbarsExampleDefault">
+				<ul class="navbar-nav mr-auto">
+					<li class="nav-item">
+						<a class="nav-link" href="countries.html">Countries</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="rates.html">Exchange Rates</a>
+					</li>
+					<li class="nav-item active">
+						<a class="nav-link" href="#">Flags <span class="sr-only">(current)</span></a>
+					</li>
+				</ul>
+			</div>
+		</nav>
+	</header>
+
+    <div class="container-fluid">
+		<div class="row">			
+			<main role="main" class="col-sm-9 ml-sm-auto col-md-10 pt-3">
+				<h1>Country flags</h1>

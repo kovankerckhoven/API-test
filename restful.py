@@ -1,6 +1,10 @@
 """
 EVENTIGRATE API TEST
 
+This file has two tasks, and should be executed on an automatic basis whenever changes
+to the described data are to be expected; it could for example be run as a cronjob once
+at the end of every day.
+
 1) Retrieve the following data from restful web services:
 https://restcountries.eu/ (free, without registration)
     Name
@@ -8,7 +12,7 @@ https://restcountries.eu/ (free, without registration)
     Capital
     Population
     Currency
-    Flag
+    Flag --------------> If we don't have it yet in images/<country.svg>
 http://fixer.io/ (free, without registration)
     Exchange rate (EUR vs. AUS, BRA, CHN, GBR, USA)
 
@@ -32,25 +36,16 @@ Table Rate_Has_Value
 	rate_id			INTEGER (FOREIGN KEY)
 	date			DATE
 	value			INTEGER
-
-3) Report the results for each country (Australia, Brazil, China, Great Britain, USA) back to the end user
-
-The end-user report should contain (the average of) all above properties for the past month in
-a nice and clean summary of the following countries: AUS, BRA, CHN, GBR, USA.. The type of
-report can be decided completely by you (.xls, .html, .pdf, .txt, .csv, ...). You can choose the
-language, technologies, frameworks, tools, etc. Please create your own database and push your
-code to a git repository together with an example of the output report and a sketch off your
-architecture/design (a photo of a simple paper-sketch suffices) and share the repository with
-thomas_demoor@msn.com or the user thomasdemoor on Bitbucket. If something is unclear,
-you can always send a mail to thomas@eventigrate.com or give a call at +32497486215.
 """
 
 # Imports
 import sys
 import json
 import requests
+import shutil
 import sqlite3 as sqlite
 from datetime import date
+from os import path
 
 currencyCodes = []
 codeCollection = ""
@@ -79,6 +74,12 @@ def db_print():
 			print(db_cursor.fetchall())
 			print("")
 
+def downloadFlag(url, filename):
+	if not path.isfile("images/%s" % filename): # If the flag has never been downloaded yet
+		req = requests.get(url, stream=True)
+		with open("images/%s" % filename, 'wb') as file:
+			shutil.copyfileobj(req.raw, file)
+
 # What we will use to temporarily store objects before updating the DB
 class Country(object):
 	def printCountry(self):
@@ -103,7 +104,7 @@ class Country(object):
 		self.callingCodes = json.get('callingCodes', None)
 		self.population = json.get('population', None)
 		self.flag = json.get('flag', None)
-
+			
 """
 restcountries.eu API Calls
 https://restcountries.eu/rest/v2/name/australia
@@ -130,6 +131,7 @@ def getCountries():
 			
 			# Map the data to Python
 			countryObj = Country(data)
+			downloadFlag(data['flag'], "%s.svg" % countryObj.currencies[0]['code'])
 			currencyCodes.append(countryObj.currencies[0]['code'])
 			codeCollection = "%s,%s" % (codeCollection, countryObj.currencies[0]['code'])
 			
@@ -161,10 +163,6 @@ def getCountries():
 """ 
 fixer.io API calls
 https://api.fixer.io/latest?symbols=USD,GBP&base=EUR (will ask for today's EUR/USD and EUR/GBP rates)
-
-TODO: Check if individual Rates records exist already (id, Base/Symbol pairings) before checking rate values
-TODO: Insert individual Rates records (id, Base/Symbol pairings) if they do not exist
-TODO: Insert Rate_Has_Value records (rate_id, date, DOUBLE value)
 """
 def getExchangeRates():
 	global currencyCodes, codeCollection, db, db_cursor
@@ -197,24 +195,11 @@ def getExchangeRates():
 		else:
 			print("RequestException")
 			raise requests.exceptions.RequestException
-
-
+			
 def callAPIs():
 	getCountries()
 	getExchangeRates()
 
 db_setup()
-#db_print()
 callAPIs()
-#db_print()
-
-"""
-def writeToFile():
-    displayFile = open("index.html", 'w')
-    displayFile.write("<HTML>")
-	displayFile.write("</HTML>")
-	displayFile.close()
-
-# Working with floating point:	
-# btc = Decimal(i*0.00000001).quantize(Decimal('.00000001'), rounding=ROUND_DOWN)
-"""
+# Call db_print() to easily print contents of the entire DB
